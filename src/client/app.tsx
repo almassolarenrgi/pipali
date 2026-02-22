@@ -27,7 +27,7 @@ import { setApiBaseUrl, apiFetch } from "./utils/api";
 import { generateUUID, generateDeterministicId, getToolCategory, type ToolCategory } from "./utils/formatting";
 import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupFocusNavigationListener } from "./utils/notifications";
 import { isTauri, onWindowShown, onSidecarReady, listenForDeepLinks } from "./utils/tauri";
-import { isNumericIdString, trimHistoryTailAfterUser } from "./utils/chat-messages";
+import { trimHistoryTailAfterUser, mergeHistoryWithLive } from "./utils/chat-messages";
 
 // Components
 import { Header, Sidebar, InputArea } from "./components/layout";
@@ -823,34 +823,6 @@ const App = () => {
             }
 
             finalizeCurrentAgent();
-            const shouldPreserveLiveMessage = (msg: Message): boolean => {
-                // Billing/errors etc aren't persisted
-                if (msg.billingInfo) return true;
-                // Keep in-progress streaming placeholders
-                if (msg.isStreaming) return true;
-                // Keep run-based assistant placeholders (stableId=runId UUID) even if streaming flag flipped
-                if (msg.role === 'assistant' && !isNumericIdString(msg.stableId)) return true;
-                // Keep optimistic user messages (id=clientMessageId UUID) until persisted
-                if (msg.role === 'user' && !isNumericIdString(msg.id)) return true;
-                return false;
-            };
-
-            const mergeHistoryWithLive = (history: Message[], live: Message[]): Message[] => {
-                if (live.length === 0) return history;
-                const merged = [...history];
-                const seenStableIds = new Set(history.map(m => m.stableId));
-                const seenRoleIds = new Set(history.map(m => `${m.role}:${m.id}`));
-                for (const msg of live) {
-                    if (!shouldPreserveLiveMessage(msg)) continue;
-                    const roleIdKey = `${msg.role}:${msg.id}`;
-                    if (seenStableIds.has(msg.stableId) || seenRoleIds.has(roleIdKey)) continue;
-                    merged.push(msg);
-                    seenStableIds.add(msg.stableId);
-                    seenRoleIds.add(roleIdKey);
-                }
-                return merged;
-            };
-
             const currentConversationId = conversationIdRef.current;
             const liveMessagesForConversation =
                 currentConversationId === id
@@ -858,7 +830,7 @@ const App = () => {
                     : (conversationStatesRef.current.get(id)?.messages ?? []);
 
             const hasActiveRunPlaceholder = liveMessagesForConversation.some(m =>
-                m.role === 'assistant' && (m.isStreaming || !isNumericIdString(m.stableId))
+                m.role === 'assistant' && m.isStreaming
             );
             const prunedHistory = hasActiveRunPlaceholder ? trimHistoryTailAfterUser(historyMessages) : historyMessages;
 
