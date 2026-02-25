@@ -460,9 +460,11 @@ const App = () => {
             window.history.pushState({}, '', url);
         }
 
-        // Skip fetching if this is just a new conversation getting its ID assigned
+        // Skip fetching if this is just a new conversation getting its server-assigned ID
         // and we already have optimistic messages in memory.
-        const isNewConversationGettingId = prevId === undefined && conversationId !== undefined;
+        // Only applies when we're actively awaiting a conversation_created response
+        // (not when loading a conversation from URL on page load).
+        const isNewConversationGettingId = prevId === undefined && conversationId !== undefined && awaitingConversationIdRef.current;
         if (isNewConversationGettingId && messages.length > 0) {
             syncConversationState(conversationId, messages);
             prevConversationIdRef.current = conversationId;

@@ -425,7 +425,7 @@ export function pubSubReloadReproScenario(): MockScenario {
                     {
                         function_name: 'shell_command',
                         arguments: {
-                            justification: 'E2E repro: run a read-only command with a unique marker',
+                            justification: 'E2E repro: repro-shell-1',
                             command: "printf 'repro-shell-1'",
                             cwd: '.',
                             operation_type: 'read-only',
