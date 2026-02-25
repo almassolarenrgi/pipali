@@ -27,7 +27,6 @@ import { setApiBaseUrl, apiFetch } from "./utils/api";
 import { generateUUID, generateDeterministicId, getToolCategory, type ToolCategory } from "./utils/formatting";
 import { initNotifications, notifyConfirmationRequest, notifyTaskComplete, setNotificationClickHandler, setupFocusNavigationListener } from "./utils/notifications";
 import { isTauri, onWindowShown, onSidecarReady, listenForDeepLinks } from "./utils/tauri";
-import { trimHistoryTailAfterUser, mergeHistoryWithLive } from "./utils/chat-messages";
 
 // Components
 import { Header, Sidebar, InputArea } from "./components/layout";
@@ -177,6 +176,7 @@ const App = () => {
         clearStopped,
         clearConfirmations,
         dismissConfirmation,
+        mergeHistory,
     } = useWebSocketChat({
         wsUrl,
         shouldActivateConversationOnCreate: () => pendingBackgroundMessageRef.current === null,
@@ -825,24 +825,7 @@ const App = () => {
             }
 
             finalizeCurrentAgent();
-            const currentConversationId = conversationIdRef.current;
-            const liveMessagesForConversation =
-                currentConversationId === id
-                    ? messagesRef.current
-                    : (conversationStatesRef.current.get(id)?.messages ?? []);
-
-            const hasActiveRunPlaceholder = liveMessagesForConversation.some(m =>
-                m.role === 'assistant' && m.isStreaming
-            );
-            const prunedHistory = hasActiveRunPlaceholder ? trimHistoryTailAfterUser(historyMessages) : historyMessages;
-
-            const mergedMessages = mergeHistoryWithLive(prunedHistory, liveMessagesForConversation);
-
-            // Only replace the visible message list if we're still viewing this conversation.
-            if (currentConversationId === id) {
-                setChatMessages(mergedMessages);
-            }
-            syncConversationState(id, mergedMessages);
+            mergeHistory(id, historyMessages);
             historyLoadedConversationIdRef.current = id;
 
             // Sync model dropdown to conversation's model and cache it

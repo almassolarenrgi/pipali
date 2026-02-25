@@ -20,7 +20,7 @@ import { useReducer, useRef, useCallback, useEffect } from 'react';
 import type { Message, Thought, ConversationState, ConfirmationRequest, BillingError } from '../types';
 import { acquireWakeLock, releaseWakeLock } from '../utils/tauri';
 import { formatToolCallsForSidebar, generateUUID, generateDeterministicId } from '../utils/formatting';
-import { trimHistoryTailAfterUser } from '../utils/chat-messages';
+import { trimHistoryTailAfterUser, mergeHistoryWithLive } from '../utils/chat-messages';
 
 // ============================================================================
 // Types
@@ -74,7 +74,8 @@ export type ChatAction =
     | { type: 'CLEAR_CONFIRMATIONS'; conversationId: string }
     | { type: 'CLEAR_COMPLETED'; conversationId: string }
     | { type: 'CLEAR_STOPPED'; conversationId: string }
-    | { type: 'OBSERVE_ACTIVE_RUN'; conversationId: string; runId?: string; clientMessageId?: string };
+    | { type: 'OBSERVE_ACTIVE_RUN'; conversationId: string; runId?: string; clientMessageId?: string }
+    | { type: 'MERGE_HISTORY'; conversationId: string; historyMessages: Message[] };
 
 export interface SendMessageOptions {
     clientMessageId?: string;
@@ -1026,6 +1027,69 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
             return { ...state, pendingConfirmations };
         }
 
+        case 'MERGE_HISTORY': {
+            // Merge server-persisted history with the current reducer state.
+            // This runs INSIDE the reducer so it always sees the latest state.messages,
+            // avoiding the stale-ref race where messagesRef.current lags behind
+            // because it's only updated in a useEffect (after render).
+            const { conversationId, historyMessages } = action;
+            const isCurrentConversation = conversationId === state.conversationId;
+
+            const currentMessages = isCurrentConversation
+                ? state.messages
+                : (state.conversationStates.get(conversationId)?.messages ?? []);
+
+            const hasActiveRunPlaceholder = currentMessages.some(m =>
+                m.role === 'assistant' && m.isStreaming
+            );
+
+            let mergedMessages: Message[];
+            if (hasActiveRunPlaceholder) {
+                // A streaming placeholder exists. Check if history already has the
+                // completed run — this happens when localStorage has a stale streaming
+                // placeholder but the server finalized the run before this fetch returned.
+                const lastHistory = historyMessages[historyMessages.length - 1];
+                const historyRunComplete = lastHistory?.role === 'assistant'
+                    && !!lastHistory.content
+                    && !lastHistory.isStreaming;
+
+                if (historyRunComplete) {
+                    mergedMessages = historyMessages;
+                } else {
+                    // Genuine active run — strip history assistants after the last user
+                    // to avoid duplicates (history may capture the completed run in the
+                    // narrow window between DB persistence and bus cleanup).
+                    const lastUserIdx = historyMessages.findLastIndex(m => m.role === 'user');
+                    const prunedHistory = lastUserIdx === -1 ? [] : historyMessages.slice(0, lastUserIdx + 1);
+                    mergedMessages = mergeHistoryWithLive(prunedHistory, currentMessages);
+                }
+            } else {
+                // When there's no active run, check if WebSocket events delivered
+                // a more complete message set than the (potentially stale) HTTP response.
+                const countThoughts = (msgs: Message[]) =>
+                    msgs.reduce((n, m) => n + (m.thoughts?.length ?? 0), 0);
+                mergedMessages = countThoughts(currentMessages) > countThoughts(historyMessages)
+                    ? currentMessages
+                    : historyMessages;
+            }
+
+            const conversationStates = new Map(state.conversationStates);
+            const existing = conversationStates.get(conversationId);
+            conversationStates.set(conversationId, {
+                isProcessing: existing?.isProcessing ?? false,
+                isStopped: existing?.isStopped ?? false,
+                isCompleted: existing?.isCompleted ?? false,
+                latestReasoning: existing?.latestReasoning,
+                messages: mergedMessages,
+            });
+
+            return {
+                ...state,
+                messages: isCurrentConversation ? mergedMessages : state.messages,
+                conversationStates,
+            };
+        }
+
         case 'OBSERVE_ACTIVE_RUN': {
             const { conversationId, runId, clientMessageId } = action;
             const isCurrentConversation = conversationId === state.conversationId;
@@ -1573,6 +1637,10 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         dispatch({ type: 'DISMISS_CONFIRMATION', conversationId, requestId });
     }, []);
 
+    const mergeHistory = useCallback((conversationId: string, historyMessages: Message[]) => {
+        dispatch({ type: 'MERGE_HISTORY', conversationId, historyMessages });
+    }, []);
+
     return {
         // State
         ...state,
@@ -1596,6 +1664,7 @@ export function useWebSocketChat(options: UseWebSocketChatOptions) {
         clearStopped,
         clearConfirmations,
         dismissConfirmation,
+        mergeHistory,
 
         // Refs
         wsRef,
