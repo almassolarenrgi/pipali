@@ -41,6 +41,9 @@ const TOOLS_WITH_CUSTOM_VIEWS = new Set([
     'chrome-browser__resize_page', 'chrome-browser__wait_for',
 ]);
 
+/** Tools whose custom views already render error output — skip the generic error fallback */
+const TOOLS_WITH_ERROR_HANDLING_VIEWS = new Set(['shell_command']);
+
 interface ThoughtItemProps {
     thought: Thought;
     stepNumber: number; // Position among tool_call thoughts
@@ -195,7 +198,8 @@ export function ThoughtItem({ thought, stepNumber, isPreview = false, showResult
                             )}
                             {/* Show regular result for other tools, or error output for tools with suppressed results */}
                             {!isInterrupted && thought.toolResult && (
-                                !TOOLS_WITH_CUSTOM_VIEWS.has(toolName) || stepStatus === 'error'
+                                !TOOLS_WITH_CUSTOM_VIEWS.has(toolName) ||
+                                (stepStatus === 'error' && !TOOLS_WITH_ERROR_HANDLING_VIEWS.has(toolName))
                             ) && (
                                 <ToolResultView
                                     result={thought.toolResult}
