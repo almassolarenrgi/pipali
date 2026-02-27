@@ -107,7 +107,13 @@ export function MessageList({ messages, conversationId, platformFrontendUrl, onD
 
         const observer = new ResizeObserver(() => {
             if (isNearBottomRef.current) {
-                container.scrollTop = container.scrollHeight;
+                // Defer scroll to after paint so hit-test coordinates stay in sync
+                // with visual positions. Synchronous scrollTop updates during layout
+                // can desync the compositor, making buttons visually offset from their
+                // actual clickable area until the next repaint.
+                requestAnimationFrame(() => {
+                    container.scrollTop = container.scrollHeight;
+                });
             }
         });
         observer.observe(messagesEl);
