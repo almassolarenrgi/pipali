@@ -83,16 +83,22 @@ export function MessageList({ messages, conversationId, platformFrontendUrl, onD
         }
     }, [conversationId, messages.length]);
 
-    // Scroll when first thought/tool call arrives (content starts streaming)
+    // Scroll when thoughts are added during streaming.
+    // The ResizeObserver handles height-based scrolling well for level 2 (full results),
+    // but at level 1 (outline) new thoughts add minimal height and STEP_END produces
+    // zero height change (results are hidden), so we need an explicit scroll trigger.
     useEffect(() => {
         const prevThoughtsLength = previousThoughtsLengthRef.current;
         previousThoughtsLengthRef.current = currentThoughtsLength;
 
-        // First thought arrived - scroll to keep user message visible
-        const firstThoughtArrived = prevThoughtsLength === 0 && currentThoughtsLength > 0;
-        if (firstThoughtArrived && isNearBottomRef.current) {
+        if (currentThoughtsLength > prevThoughtsLength && isNearBottomRef.current) {
+            const container = mainContentRef.current;
             requestAnimationFrame(() => {
-                lastUserMessageRef.current?.scrollIntoView({ behavior: 'smooth' });
+                if (prevThoughtsLength === 0) {
+                    lastUserMessageRef.current?.scrollIntoView({ behavior: 'smooth' });
+                } else if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
             });
         }
     }, [currentThoughtsLength]);
