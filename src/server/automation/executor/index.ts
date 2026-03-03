@@ -341,7 +341,7 @@ async function getOrCreateAutomationConversation(
         'pipali-automation',
         '1.0.0',
         'default',
-        `Automation: ${automation.name}`
+        `Routine: ${automation.name}`
     );
 
     // Link the conversation to the automation (bidirectional)

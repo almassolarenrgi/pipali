@@ -6,7 +6,7 @@ import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { db, getDefaultChatModel } from '../db';
-import { Conversation } from '../db/schema';
+import { Automation, Conversation } from '../db/schema';
 import { eq, desc, isNull, and, sql } from 'drizzle-orm';
 import { AiModelApi, ChatModel, User, UserChatModel } from '../db/schema';
 import openapi from './openapi';
@@ -291,7 +291,18 @@ api.put('/conversations/:conversationId/title', async (c) => {
     if (typeof title !== 'string' || !title.trim()) {
         return c.json({ error: 'title must be a non-empty string' }, 400);
     }
-    await db.update(Conversation).set({ title: title.trim() }).where(eq(Conversation.id, conversationId));
+    const trimmedTitle = title.trim();
+    await db.update(Conversation).set({ title: trimmedTitle }).where(eq(Conversation.id, conversationId));
+
+    // Sync title to linked automation
+    const [conv] = await db.select({ automationId: Conversation.automationId })
+        .from(Conversation).where(eq(Conversation.id, conversationId));
+    if (conv?.automationId) {
+        // strip "Routine: " prefix for the automation name
+        const automationName = trimmedTitle.replace(/^Routine:\s*/i, '');
+        await db.update(Automation).set({ name: automationName }).where(eq(Automation.id, conv.automationId));
+    }
+
     return c.json({ success: true });
 });
 

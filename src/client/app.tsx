@@ -1415,6 +1415,7 @@ const App = () => {
                             onConfirmationRespond={respondToAutomationConfirmation}
                             onConfirmationDismiss={dismissAutomationConfirmation}
                             onViewConversation={selectConversation}
+                            onAutomationChanged={fetchConversations}
                         />
                     )}
                     {currentPage === 'mcp-tools' && (
