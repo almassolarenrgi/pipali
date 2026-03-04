@@ -22,11 +22,7 @@ export function ToastContainer({
 }: ToastContainerProps) {
     // Filter out confirmations for current conversation (shown inline instead)
     const toastConfirmations = confirmations.filter(c => {
-        if (c.source.type === 'chat') {
-            return c.source.conversationId !== currentConversationId;
-        }
-        // Always show automation confirmations as toasts
-        return true;
+        return c.source.conversationId !== currentConversationId;
     });
 
     if (toastConfirmations.length === 0) return null;

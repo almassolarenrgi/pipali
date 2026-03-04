@@ -1172,9 +1172,17 @@ const App = () => {
 
     const sendCurrentConfirmationResponse = (optionId: string, guidance?: string) => {
         if (!conversationId) return;
+        // Check chat confirmations first
         const pending = pendingConfirmations.get(conversationId)?.[0];
-        if (!pending) return;
-        sendConfirmationResponse(conversationId, pending.request.requestId, optionId, guidance);
+        if (pending) {
+            sendConfirmationResponse(conversationId, pending.request.requestId, optionId, guidance);
+            return;
+        }
+        // Check automation confirmations for this conversation
+        const autoConfirmation = automationConfirmations.find(c => c.conversationId === conversationId);
+        if (autoConfirmation) {
+            respondToAutomationConfirmation(autoConfirmation.id, optionId, guidance);
+        }
     };
 
     // Transform chat confirmation to standard format
@@ -1415,6 +1423,7 @@ const App = () => {
                             onConfirmationRespond={respondToAutomationConfirmation}
                             onConfirmationDismiss={dismissAutomationConfirmation}
                             onViewConversation={selectConversation}
+                            onAutomationChanged={fetchConversations}
                         />
                     )}
                     {currentPage === 'mcp-tools' && (
@@ -1439,7 +1448,10 @@ const App = () => {
                         isStopped={isStopped}
                         conversationId={conversationId}
                         onStop={stopResearch}
-                        pendingConfirmation={conversationId ? pendingConfirmations.get(conversationId)?.[0]?.request : undefined}
+                        pendingConfirmation={conversationId
+                            ? (pendingConfirmations.get(conversationId)?.[0]?.request
+                                ?? automationConfirmations.find(c => c.conversationId === conversationId)?.request)
+                            : undefined}
                         onConfirmationRespond={sendCurrentConfirmationResponse}
                         textareaRef={textareaRef}
                         onBackgroundSend={sendAsBackgroundTask}

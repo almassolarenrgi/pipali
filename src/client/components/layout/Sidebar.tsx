@@ -230,9 +230,15 @@ export function Sidebar({
     })();
 
     // Split conversations into visible (first 5) and hidden (rest)
-    const visibleConversations = conversations.slice(0, MAX_VISIBLE_CHATS);
+    // Always include the current conversation so it appears in the sidebar
+    const topConversations = conversations.slice(0, MAX_VISIBLE_CHATS);
+    const currentInTop = !currentConversationId || topConversations.some(c => c.id === currentConversationId);
+    const currentConv = !currentInTop ? conversations.find(c => c.id === currentConversationId) : undefined;
+    const visibleConversations = currentConv
+        ? [...topConversations.slice(0, MAX_VISIBLE_CHATS - 1), currentConv]
+        : topConversations;
     const hasMoreChats = conversations.length > MAX_VISIBLE_CHATS;
-    const hiddenChatsCount = conversations.length - MAX_VISIBLE_CHATS;
+    const hiddenChatsCount = conversations.length - visibleConversations.length;
 
     const toggleConversationMenu = (id: string, e: React.MouseEvent, context: 'sidebar' | 'modal') => {
         e.stopPropagation();
@@ -388,6 +394,8 @@ export function Sidebar({
                     <AlertCircle size={16} className="conversation-icon needs-attention" />
                 ) : isCompleted ? (
                     <CheckCircle size={16} className="conversation-icon completed" />
+                ) : conv.isAutomation ? (
+                    <Clock size={16} className="conversation-icon" />
                 ) : (
                     <MessageSquare size={16} className="conversation-icon" />
                 )}

@@ -8,7 +8,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { db } from '../db';
-import { Automation, AutomationExecution, User } from '../db/schema';
+import { Automation, AutomationExecution, Conversation, User } from '../db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getDefaultUser } from '../utils';
 import {
@@ -52,8 +52,8 @@ const createAutomationSchema = z.object({
     name: z.string().min(1).max(100),
     description: z.string().optional(),
     prompt: z.string().min(1),
-    triggerType: z.enum(['cron', 'file_watch']).optional(),
-    triggerConfig: triggerConfigSchema.optional(),
+    triggerType: z.enum(['cron', 'file_watch']).nullable().optional(),
+    triggerConfig: triggerConfigSchema.nullable().optional(),
     maxExecutionsPerDay: z.number().min(1).optional(),
     maxExecutionsPerHour: z.number().min(1).optional(),
 });
@@ -228,6 +228,13 @@ automations.put('/:id', zValidator('json', createAutomationSchema.partial()), as
         .returning();
 
     if (!automation) return c.json({ error: 'Not found' }, 404);
+
+    // Sync conversation title when name changes
+    if (data.name && automation.conversationId) {
+        await db.update(Conversation)
+            .set({ title: `Routine: ${automation.name}` })
+            .where(eq(Conversation.id, automation.conversationId));
+    }
 
     // Reload scheduler/watcher if trigger changed
     await reloadAutomation(automation.id);

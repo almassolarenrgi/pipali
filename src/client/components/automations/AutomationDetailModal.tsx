@@ -176,6 +176,7 @@ export function AutomationDetailModal({
     const [dayOfMonth, setDayOfMonth] = useState(initialParsed.dayOfMonth);
     const [minuteOfHour, setMinuteOfHour] = useState(initialParsed.minuteOfHour);
     const [time, setTime] = useState(initialParsed.time);
+    const [name, setName] = useState(automation.name);
     const [instructions, setInstructions] = useState(automation.prompt);
 
     // Schedule toggle for edit mode (initialized from automation's current state)
@@ -198,7 +199,7 @@ export function AutomationDetailModal({
                 onUpdated();
             } else {
                 const data = await res.json();
-                setError(data.error || 'Failed to update routine status');
+                setError(typeof data.error === 'string' ? data.error : 'Failed to update routine status');
             }
         } catch (e) {
             setError('Failed to update routine status');
@@ -222,20 +223,13 @@ export function AutomationDetailModal({
                     onViewConversation(data.conversationId);
                 }
             } else {
-                setError(data.error || 'Failed to trigger routine');
+                setError(typeof data.error === 'string' ? data.error : 'Failed to trigger routine');
             }
         } catch (e) {
             setError('Failed to trigger routine');
         } finally {
             setIsTriggering(false);
         }
-    };
-
-    // Generate automation name from instructions (same as CreateAutomationModal)
-    const generateName = (text: string): string => {
-        const trimmed = text.trim();
-        if (trimmed.length <= 50) return trimmed;
-        return trimmed.slice(0, 47) + '...';
     };
 
     const handleSave = async () => {
@@ -245,7 +239,7 @@ export function AutomationDetailModal({
         try {
             // Build request body - trigger is optional
             const body: Record<string, unknown> = {
-                name: generateName(instructions),
+                name: name.trim().slice(0, 100),
                 prompt: instructions,
             };
 
@@ -274,7 +268,7 @@ export function AutomationDetailModal({
                 onUpdated();
             } else {
                 const data = await res.json();
-                setError(data.error || 'Failed to save routine');
+                setError(typeof data.error === 'string' ? data.error : 'Failed to save routine');
             }
         } catch (e) {
             setError('Failed to save routine');
@@ -296,7 +290,7 @@ export function AutomationDetailModal({
                 onDeleted();
             } else {
                 const data = await res.json();
-                setError(data.error || 'Failed to delete routine');
+                setError(typeof data.error === 'string' ? data.error : 'Failed to delete routine');
                 setShowDeleteConfirm(false);
             }
         } catch (e) {
@@ -481,6 +475,17 @@ export function AutomationDetailModal({
                     ) : (
                         // Edit mode
                         <>
+                            <div className="automation-detail-section">
+                                <h3>Name</h3>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    className="automation-name-input"
+                                    maxLength={100}
+                                />
+                            </div>
+
                             <div className="automation-detail-section">
                                 <h3>Instructions</h3>
                                 <textarea

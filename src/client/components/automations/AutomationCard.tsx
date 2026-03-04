@@ -41,19 +41,19 @@ function formatSchedule(automation: AutomationInfo): string {
         const suffix = ['th', 'st', 'nd', 'rd'];
         const minuteNum = parseInt(minute, 10);
         const s = suffix[(minuteNum % 10 <= 3 && Math.floor(minuteNum / 10) !== 1) ? minuteNum % 10 : 0];
-        return `Every hour at ${minuteNum}${s} minute`;
+        return `Hourly at ${minuteNum}${s} minute`;
     }
 
     // Daily
     if (dayOfMonth === '*' && dayOfWeek === '*') {
-        return `Every day at ${timeStr}`;
+        return `Daily at ${timeStr}`;
     }
 
     // Weekly
     if (dayOfMonth === '*' && dayOfWeek !== '*') {
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayName = days[parseInt(dayOfWeek, 10)] ?? dayOfWeek;
-        return `Every ${dayName} at ${timeStr}`;
+        return `Weekly on ${dayName} at ${timeStr}`;
     }
 
     // Monthly
@@ -61,7 +61,7 @@ function formatSchedule(automation: AutomationInfo): string {
         const suffix = ['th', 'st', 'nd', 'rd'];
         const dom = parseInt(dayOfMonth, 10);
         const s = suffix[(dom % 10 <= 3 && Math.floor(dom / 10) !== 1) ? dom % 10 : 0];
-        return `Every ${dom}${s} of the month at ${timeStr}`;
+        return `Monthly on ${dom}${s} at ${timeStr}`;
     }
 
     return config.schedule;

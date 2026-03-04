@@ -14,6 +14,7 @@ interface AutomationsPageProps {
     onConfirmationRespond: (confirmationId: string, optionId: string, guidance?: string) => void;
     onConfirmationDismiss: (confirmationId: string) => void;
     onViewConversation: (conversationId: string) => void;
+    onAutomationChanged?: () => void;
 }
 
 export function AutomationsPage({
@@ -21,6 +22,7 @@ export function AutomationsPage({
     onConfirmationRespond,
     onConfirmationDismiss,
     onViewConversation,
+    onAutomationChanged,
 }: AutomationsPageProps) {
     const [automations, setAutomations] = useState<AutomationInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -69,11 +71,13 @@ export function AutomationsPage({
     const handleAutomationUpdated = () => {
         setSelectedAutomation(null);
         handleRefresh();
+        onAutomationChanged?.();
     };
 
     const handleAutomationDeleted = () => {
         setSelectedAutomation(null);
         handleRefresh();
+        onAutomationChanged?.();
     };
 
     if (isLoading) {

@@ -9,6 +9,7 @@ export type ConversationSummary = {
     createdAt: string;
     updatedAt: string;
     isActive?: boolean;
+    isAutomation?: boolean;
     latestReasoning?: string;
     matchSnippet?: string;
 };

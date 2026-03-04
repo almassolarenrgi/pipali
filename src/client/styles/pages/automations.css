@@ -263,8 +263,8 @@
     line-height: 1.5;
     font-style: italic;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -428,28 +428,44 @@
     color: var(--color-text);
 }
 
-.instructions-textarea {
+.automation-name-input,
+.instructions-textarea,
+.confirmation-guidance-input {
     width: 100%;
-    padding: 12px 14px;
-    background: var(--color-bg-elevated);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    font-size: 14px;
     font-family: inherit;
     color: var(--color-text);
-    resize: vertical;
-    min-height: 100px;
     transition: all var(--transition);
 }
 
-.instructions-textarea:focus {
+.automation-name-input:focus,
+.instructions-textarea:focus,
+.confirmation-guidance-input:focus {
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px rgba(23, 23, 23, 0.1);
 }
 
-.instructions-textarea::placeholder {
+.instructions-textarea::placeholder,
+.confirmation-guidance-input::placeholder {
     color: var(--color-text-muted);
+}
+
+.automation-name-input {
+    padding: 8px 14px;
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.instructions-textarea {
+    padding: 12px 14px;
+    background: var(--color-bg-elevated);
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    resize: vertical;
+    min-height: 100px;
 }
 
 /* Save button styling */
@@ -533,6 +549,15 @@
 .automation-detail-modal {
     max-width: 560px;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+}
+
+.automation-detail-modal > .automation-detail-content {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .automation-detail-header-content {
@@ -790,25 +815,12 @@
 }
 
 .confirmation-guidance-input {
-    width: 100%;
     padding: 10px 12px;
-    border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-bg);
-    color: var(--color-text);
     font-size: 13px;
-    font-family: inherit;
     resize: vertical;
     min-height: 60px;
-}
-
-.confirmation-guidance-input:focus {
-    outline: none;
-    border-color: var(--color-accent);
-}
-
-.confirmation-guidance-input::placeholder {
-    color: var(--color-text-muted);
 }
 
 .confirmation-guidance-actions {

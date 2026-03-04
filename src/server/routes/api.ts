@@ -6,7 +6,7 @@ import { cors } from 'hono/cors';
 import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 import { db, getDefaultChatModel } from '../db';
-import { Conversation } from '../db/schema';
+import { Automation, Conversation } from '../db/schema';
 import { eq, desc, isNull, and, sql } from 'drizzle-orm';
 import { AiModelApi, ChatModel, User, UserChatModel } from '../db/schema';
 import openapi from './openapi';
@@ -161,11 +161,8 @@ api.get('/conversations', async (c) => {
 
     const q = c.req.query('q')?.trim();
 
-    // Base filter: user's non-automation conversations
-    const baseWhere = and(
-        eq(Conversation.userId, adminUser.id),
-        isNull(Conversation.automationId)
-    );
+    // Base filter: user's conversations (including automation conversations)
+    const baseWhere = eq(Conversation.userId, adminUser.id);
 
     // When searching, add JSONB full-text search across user messages and agent final responses
     const searchPattern = q ? `%${q.replace(/%/g, '\\%').replace(/_/g, '\\_')}%` : '';
@@ -187,6 +184,7 @@ api.get('/conversations', async (c) => {
         createdAt: Conversation.createdAt,
         updatedAt: Conversation.updatedAt,
         trajectory: Conversation.trajectory,
+        automationId: Conversation.automationId,
     })
     .from(Conversation)
     .where(whereClause)
@@ -253,6 +251,7 @@ api.get('/conversations', async (c) => {
             createdAt: conv.createdAt,
             updatedAt: conv.updatedAt,
             isActive,
+            isAutomation: !!conv.automationId,
             latestReasoning,
             ...(matchSnippet !== undefined && { matchSnippet }),
         };
@@ -291,7 +290,18 @@ api.put('/conversations/:conversationId/title', async (c) => {
     if (typeof title !== 'string' || !title.trim()) {
         return c.json({ error: 'title must be a non-empty string' }, 400);
     }
-    await db.update(Conversation).set({ title: title.trim() }).where(eq(Conversation.id, conversationId));
+    const trimmedTitle = title.trim();
+    await db.update(Conversation).set({ title: trimmedTitle }).where(eq(Conversation.id, conversationId));
+
+    // Sync title to linked automation
+    const [conv] = await db.select({ automationId: Conversation.automationId })
+        .from(Conversation).where(eq(Conversation.id, conversationId));
+    if (conv?.automationId) {
+        // strip "Routine: " prefix for the automation name
+        const automationName = trimmedTitle.replace(/^Routine:\s*/i, '');
+        await db.update(Automation).set({ name: automationName }).where(eq(Automation.id, conv.automationId));
+    }
+
     return c.json({ success: true });
 });
 

@@ -66,11 +66,8 @@ export function CreateAutomationModal({ onClose, onCreated }: CreateAutomationMo
         }
     };
 
-    // Generate automation name from instructions
     const generateName = (): string => {
-        const trimmed = instructions.trim();
-        if (trimmed.length <= 50) return trimmed;
-        return trimmed.slice(0, 47) + '...';
+        return instructions.trim().slice(0, 100);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -109,7 +106,7 @@ export function CreateAutomationModal({ onClose, onCreated }: CreateAutomationMo
                 onCreated();
             } else {
                 const data = await res.json();
-                setError(data.error || 'Failed to create routine');
+                setError(typeof data.error === 'string' ? data.error : 'Failed to create routine');
             }
         } catch (e) {
             setError('Failed to create routine');
