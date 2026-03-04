@@ -121,7 +121,7 @@ test.describe('Automations Page', () => {
             await expect(scheduleEl).toBeVisible();
 
             const scheduleText = await scheduleEl.textContent();
-            expect(scheduleText?.toLowerCase()).toContain('day');
+            expect(scheduleText?.toLowerCase()).toContain('daily');
         });
 
         test('should display prompt on automation card', async () => {
