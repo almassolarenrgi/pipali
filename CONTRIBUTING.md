@@ -20,11 +20,12 @@ Open [http://localhost:6464](http://localhost:6464) in your browser.
 
 ### Desktop App
 
-Build the Tauri desktop app (requires [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)):
-
-```bash
-bun run tauri:build:debug
-```
+1. Setup [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)
+2. [Generate](https://v2.tauri.app/reference/cli/#signer-generate) a signing key and set `TAURI_SIGNING_PRIVATE_KEY` env var in .env file or shell export. See [Tauri signed updates](https://v2.tauri.app/plugin/updater/#signing-updates)
+3. Build the Tauri desktop app:
+   ```bash
+   bun run tauri:build:debug
+   ```
 
 ### Environment Variables
 
