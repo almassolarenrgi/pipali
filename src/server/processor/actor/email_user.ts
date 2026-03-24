@@ -88,7 +88,7 @@ export async function emailUser(args: EmailUserArgs, conversationId?: string): P
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (conversationId) headers['X-Pipali-Conversation-ID'] = conversationId;
 
-        const result = await platformFetch<{ success: boolean }>(endpoint, {
+        const result = await platformFetch<{ success: boolean; email: string }>(endpoint, {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -104,7 +104,7 @@ export async function emailUser(args: EmailUserArgs, conversationId?: string): P
         }
 
         const attachmentMsg = processedAttachments?.length ? ` with ${processedAttachments.length} attachment(s)` : '';
-        return { compiled: `Email sent successfully with subject: "${subject}"${attachmentMsg}` };
+        return { compiled: `Email sent successfully to ${result.data.email} with subject: "${subject}"${attachmentMsg}` };
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         log.error({ err: error }, 'Email send failed');
