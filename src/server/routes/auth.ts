@@ -91,10 +91,13 @@ auth.get('/status', async (c) => {
         userInfo = await getPlatformUserInfo();
     }
 
+    const { version } = await import('../../../package.json');
+
     return c.json({
         anonMode,
         authenticated,
         user: userInfo,
+        version,
     });
 });
 

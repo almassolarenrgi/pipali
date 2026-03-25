@@ -12,4 +12,5 @@ export interface AuthStatus {
     anonMode: boolean;
     authenticated: boolean;
     user: PlatformUser | null;
+    version?: string;
 }

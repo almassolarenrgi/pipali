@@ -207,6 +207,18 @@ async function readBuiltinSkills(): Promise<{ [relativePath: string]: { content:
     return skills;
 }
 
+async function readChangelog(): Promise<string> {
+    const pkg = JSON.parse(await fs.readFile(path.join(ROOT_DIR, "package.json"), "utf-8"));
+    const version = pkg.version as string;
+    const text = await fs.readFile(path.join(ROOT_DIR, "CHANGELOG.md"), "utf-8");
+    const header = `## ${version}`;
+    const startIdx = text.indexOf(header);
+    if (startIdx === -1) return "";
+    const afterHeader = startIdx + header.length;
+    const nextSection = text.indexOf("\n## ", afterHeader);
+    return (nextSection === -1 ? text.slice(afterHeader) : text.slice(afterHeader, nextSection)).trim();
+}
+
 function escapeForTemplate(str: string): string {
     // Escape backticks and ${} for template literals
     return str
@@ -221,7 +233,8 @@ async function generateEmbeddedAssets(
     stylesCss: string,
     appJs: string,
     icons: { [key: string]: string },
-    builtinSkills: { [path: string]: { content: string; binary: boolean } }
+    builtinSkills: { [path: string]: { content: string; binary: boolean } },
+    changelog: string,
 ) {
     console.log("📝 Generating embedded assets module...");
 
@@ -267,6 +280,8 @@ export const EMBEDDED_BUILTIN_SKILLS: { [path: string]: { content: string; binar
 ${builtinSkillsObject}
 };
 
+export const EMBEDDED_CHANGELOG = \`${escapeForTemplate(changelog)}\`;
+
 export const IS_COMPILED_BINARY = true;
 `;
 
@@ -302,6 +317,9 @@ export const EMBEDDED_ICONS: { [key: string]: string } = {};
 
 // Builtin skills (path -> content, binary files are base64 encoded)
 export const EMBEDDED_BUILTIN_SKILLS: { [path: string]: { content: string; binary: boolean } } = {};
+
+// Release notes for current version (parsed from CHANGELOG.md during build)
+export const EMBEDDED_CHANGELOG = "";
 
 // Flag to check if assets are embedded (set to true during build)
 export const IS_COMPILED_BINARY = false;
@@ -371,9 +389,10 @@ async function main() {
         const icons = await readIcons();
         const builtinSkills = await readBuiltinSkills();
         const indexHtml = await fs.readFile(path.join(CLIENT_SRC, "index.html"), "utf-8");
+        const changelog = await readChangelog();
 
         // Generate embedded assets module
-        await generateEmbeddedAssets(migrations, indexHtml, stylesCss, appJs, icons, builtinSkills);
+        await generateEmbeddedAssets(migrations, indexHtml, stylesCss, appJs, icons, builtinSkills, changelog);
 
         // Compile
         await compile(target);

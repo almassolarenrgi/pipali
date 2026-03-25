@@ -1,7 +1,8 @@
 // Sidebar with conversation list
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, MessageSquare, AlertCircle, CheckCircle, Plus, MoreVertical, Trash2, ChevronRight, Search, X, Zap, Clock, Hammer, Settings, User, LogOut, Shield, Sun, Moon, Monitor, Pencil, Pin, PinOff, Copy, Link, FileText } from 'lucide-react';
+import { Loader2, MessageSquare, AlertCircle, CheckCircle, Plus, MoreVertical, Trash2, ChevronRight, Search, X, Zap, Clock, Hammer, Settings, LogOut, Shield, Sun, Moon, Monitor, Pencil, Pin, PinOff, Copy, Link, FileText, Gift } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import type { ConversationSummary, ConversationState, ConfirmationRequest, AuthStatus, BillingAlert } from '../../types';
 import { useTheme } from '../../hooks';
 import { BillingAlertBanner } from '../billing';
@@ -111,6 +112,8 @@ export function Sidebar({
     const searchInputRef = useRef<HTMLInputElement>(null);
     const [gravatarUrl, setGravatarUrl] = useState<string | null>(null);
     const [gravatarFailed, setGravatarFailed] = useState(false);
+    const [showChangelog, setShowChangelog] = useState(false);
+    const [changelogNotes, setChangelogNotes] = useState<string | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const { theme, setTheme, isDark } = useTheme();
 
@@ -178,20 +181,26 @@ export function Sidebar({
                     return !prev;
                 });
             }
-            // Close modal on Escape (capture phase to intercept before other handlers)
-            // But not while renaming — Escape should cancel rename first
-            if (e.key === 'Escape' && showAllChatsModal && !renamingConversationId) {
-                e.preventDefault();
-                e.stopPropagation();
-                setShowAllChatsModal(false);
-                setSearchQuery('');
-                setSelectedIndex(0);
+            // Close modals on Escape (capture phase to intercept before other handlers)
+            if (e.key === 'Escape') {
+                if (showChangelog) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowChangelog(false);
+                    setChangelogNotes(null);
+                } else if (showAllChatsModal && !renamingConversationId) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowAllChatsModal(false);
+                    setSearchQuery('');
+                    setSelectedIndex(0);
+                }
             }
         };
 
         document.addEventListener('keydown', handleGlobalKeyDown, true);
         return () => document.removeEventListener('keydown', handleGlobalKeyDown, true);
-    }, [showAllChatsModal, renamingConversationId]);
+    }, [showAllChatsModal, renamingConversationId, showChangelog]);
 
     // Debounced server-side full-text search across message content
     useEffect(() => {
@@ -731,6 +740,27 @@ export function Sidebar({
                                             </button>
                                         </div>
                                     </div>
+                                    {authStatus.version && (
+                                        <button
+                                            className="user-menu-item"
+                                            onClick={async () => {
+                                                setShowUserMenu(false);
+                                                try {
+                                                    const res = await apiFetch('/api/changelog');
+                                                    if (res.ok) {
+                                                        const data = await res.json();
+                                                        setChangelogNotes(data.notes);
+                                                    }
+                                                } catch { /* ignore */ }
+                                                setShowChangelog(true);
+                                            }}
+                                            role="menuitem"
+                                        >
+                                            <Gift size={14} />
+                                            <span>What's New</span>
+                                            <span className="user-menu-version-badge">v{authStatus.version}</span>
+                                        </button>
+                                    )}
                                     {!authStatus.anonMode && (
                                         <button
                                             className="user-menu-item danger"
@@ -825,6 +855,46 @@ export function Sidebar({
                             <span className="keyboard-hint">
                                 <kbd>↑</kbd><kbd>↓</kbd> navigate · <kbd>Enter</kbd> open · <kbd>{MOD_KEY}O</kbd> toggle · <kbd>Esc</kbd> close
                             </span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* What's New Modal */}
+            {showChangelog && (
+                <div
+                    className="chat-modal-overlay"
+                    onClick={() => { setShowChangelog(false); setChangelogNotes(null); }}
+                >
+                    <div
+                        className="chat-modal changelog-modal"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="chat-modal-header">
+                            <h2>What's New in v{authStatus?.version}</h2>
+                            <button
+                                className="chat-modal-close"
+                                onClick={() => { setShowChangelog(false); setChangelogNotes(null); }}
+                                aria-label="Close"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="changelog-content">
+                            {changelogNotes ? (
+                                <ReactMarkdown>{changelogNotes}</ReactMarkdown>
+                            ) : (
+                                <p className="no-conversations">No release notes available for this version.</p>
+                            )}
+                        </div>
+                        <div className="changelog-footer">
+                            <a
+                                href="https://github.com/khoj-ai/pipali/releases"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                Previous release notes
+                            </a>
                         </div>
                     </div>
                 </div>

@@ -413,6 +413,13 @@ async function buildServerBundle() {
         path.join(stylesDir, "index.css")
     );
 
+    // Copy CHANGELOG.md for the "What's New" feature
+    console.log("   Copying CHANGELOG.md...");
+    await fs.copyFile(
+        path.join(ROOT_DIR, "CHANGELOG.md"),
+        path.join(serverResourceDir, "CHANGELOG.md")
+    );
+
     // Create a minimal package.json with only the external dependencies
     const minimalPackageJson = {
         name: "pipali-server",

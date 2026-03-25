@@ -22,6 +22,7 @@ import { loadSkills, getLoadedSkills, createSkill, getSkill, deleteSkill, update
 import { loadUserContext, saveUserContext } from '../user-context';
 import { syncPlatformModels, syncPlatformWebTools } from '../auth';
 import { createChildLogger } from '../logger';
+import { IS_COMPILED_BINARY, EMBEDDED_CHANGELOG } from '../embedded-assets';
 import { getBus } from '../events/conversation-event-bus';
 import {
     getSandboxConfig,
@@ -55,6 +56,38 @@ api.use('*', cors({
 
 // Health check endpoint for Tauri sidecar readiness detection
 api.get('/health', (c) => c.json({ status: 'ok' }));
+
+// Get release notes for current version from CHANGELOG.md
+api.get('/changelog', async (c) => {
+    try {
+        const { version } = await import('../../../package.json');
+
+        // Use embedded changelog in compiled single-file builds
+        if (IS_COMPILED_BINARY && EMBEDDED_CHANGELOG) {
+            return c.json({ version, notes: EMBEDDED_CHANGELOG });
+        }
+
+        // Read from disk: Tauri resource dir, or project root in dev
+        const resourceDir = process.env.PIPALI_SERVER_RESOURCE_DIR;
+        const changelogPath = resourceDir
+            ? `${resourceDir}/CHANGELOG.md`
+            : new URL('../../../CHANGELOG.md', import.meta.url).pathname;
+        const text = await Bun.file(changelogPath).text();
+
+        // Extract section for current version (between "## <version>" and next "## ")
+        const header = `## ${version}`;
+        const startIdx = text.indexOf(header);
+        if (startIdx === -1) {
+            return c.json({ version, notes: null });
+        }
+        const afterHeader = startIdx + header.length;
+        const nextSection = text.indexOf('\n## ', afterHeader);
+        const notes = (nextSection === -1 ? text.slice(afterHeader) : text.slice(afterHeader, nextSection)).trim();
+        return c.json({ version, notes });
+    } catch {
+        return c.json({ version: null, notes: null });
+    }
+});
 
 const schema = z.object({
     message: z.string(),

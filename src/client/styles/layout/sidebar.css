@@ -244,6 +244,60 @@
     text-align: center;
 }
 
+.user-menu-version-badge {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--color-text-muted);
+}
+
+/* What's New / Changelog Modal */
+.changelog-modal {
+    max-width: 480px;
+}
+
+.changelog-content {
+    padding: 16px 20px;
+    overflow-y: auto;
+    max-height: 60vh;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+.changelog-content h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 16px 0 8px;
+}
+
+.changelog-content h3:first-child {
+    margin-top: 0;
+}
+
+.changelog-content ul {
+    margin: 0 0 4px;
+    padding-left: 20px;
+}
+
+.changelog-content li {
+    margin-bottom: 4px;
+}
+
+.changelog-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--color-border-subtle);
+    font-size: 12px;
+}
+
+.changelog-footer a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+}
+
+.changelog-footer a:hover {
+    color: var(--color-text);
+}
+
 /* Theme Toggle in User Menu */
 .user-menu-theme {
     display: flex;
